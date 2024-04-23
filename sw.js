@@ -59,25 +59,23 @@ self.addEventListener('activate', evt => {
 });
 
 //Fetch event
-self.addEventListener('fetch', evt =>{
-   // console.log(evt);
+self.addEventListener('fetch', evt => {
+    // console.log(evt);
    // check if request is made by chrome extensions or web page
-  // if request is made for web page url must contains http.
-  if (!(evt.request.url.indexOf('http') === 0)) return; // skip the request. if request is not made with http protocol
+   // if request is made for web page url must contains http.
+   if (!(evt.request.url.startsWith('http'))) return; // Skip requests not made with http protocol
 
-    evt.respondWith(
-        caches.match(evt.request).then(cacheRes => {
-            return cacheRes || fetch(evt.request).then(fetchRes =>{
-                return caches.open(dynamicCacheName).then(cache =>{
-                    cache.put(evt.request.url, fetchRes.clone())
-                    limitCacheSize(dynamicCacheName, 75);
-                    return fetchRes;
-                })
-            });
-        }).catch(() => {
-            if(evt.request.url.indexOf('.php') > -1) {
-                return caches.match('default.php')
-            }
-        })
-    );
+   evt.respondWith(
+       fetch(evt.request).then(fetchRes => {
+           return caches.open(dynamicCacheName).then(cache => {
+               cache.put(evt.request.url, fetchRes.clone());
+               limitCacheSize(dynamicCacheName, 75);
+               return fetchRes;
+           });
+       }).catch(() => {
+           return caches.match(evt.request).then(cacheRes => {
+               return cacheRes || caches.match('default.php'); // Fallback to default.php if not found in cache
+           });
+       })
+   );
 });
