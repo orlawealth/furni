@@ -1,7 +1,7 @@
 //console.log('service worker inside sw.js');
 
-const cacheName = "app-shell-rsrs-v1";
-const dynamicCacheName = "dynamic-cache-v1";
+const cacheName = "app-shell-rsrs-v4";
+const dynamicCacheName = "dynamic-cache-v4";
 
 const assets = [
     '/',
@@ -59,23 +59,28 @@ self.addEventListener('activate', evt => {
 });
 
 //Fetch event
-self.addEventListener('fetch', evt => {
+self.addEventListener('fetch', evt =>{
     // console.log(evt);
-   // check if request is made by chrome extensions or web page
-   // if request is made for web page url must contains http.
-   if (!(evt.request.url.startsWith('http'))) return; // Skip requests not made with http protocol
-
-   evt.respondWith(
-       fetch(evt.request).then(fetchRes => {
-           return caches.open(dynamicCacheName).then(cache => {
-               cache.put(evt.request.url, fetchRes.clone());
-               limitCacheSize(dynamicCacheName, 75);
-               return fetchRes;
-           });
-       }).catch(() => {
-           return caches.match(evt.request).then(cacheRes => {
-               return cacheRes || caches.match('default.php'); // Fallback to default.php if not found in cache
-           });
-       })
-   );
+     evt.respondWith(
+         caches.match(evt.request).then(cacheRes => {
+             return cacheRes || fetch(evt.request).then(fetchRes =>{
+                 return caches.open(dynamicCacheName).then(cache =>{
+                     cache.put(evt.request.url, fetchRes.clone())
+                     limitCacheSize(dynamicCacheName, 75);
+                     return fetchRes;
+                 })
+             });
+         }).catch(() => {
+             if(evt.request.url.indexOf('.php') > -1) {
+                 return caches.match('default.php')
+             }
+         })
+     );
+ });
+ 
+ // Update service worker on reload
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
